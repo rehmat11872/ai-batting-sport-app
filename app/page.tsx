@@ -378,7 +378,7 @@ export default function Home() {
                 Weather conditions play a crucial role in outdoor sports. Our weather integration provides:
               </p>
               <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-                <li>Current temperature and "feels like" temperature</li>
+                <li>Current temperature and &quot;feels like&quot; temperature</li>
                 <li>Humidity and wind speed measurements</li>
                 <li>Weather conditions (sunny, cloudy, rainy, etc.)</li>
                 <li>Real-time updates for accurate decision-making</li>
