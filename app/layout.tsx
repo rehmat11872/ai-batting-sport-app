@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SessionProvider } from "@/components/session-provider";
-import { EnhancedNavbar } from "@/components/enhanced-navbar";
+import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
   title: "AI Sports Betting App",
-  description: "Your daily AI-powered predictions dashboard",
+  description: "Real-time AI predictions powered by live odds.",
 };
 
 export default function RootLayout({
@@ -17,17 +16,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <SessionProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <EnhancedNavbar />
-            {children}
-          </ThemeProvider>
-        </SessionProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

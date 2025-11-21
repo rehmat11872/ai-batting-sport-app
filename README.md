@@ -1,113 +1,81 @@
-# AI Sports Betting App
+# AI Sports Betting App (MVP)
 
-A Next.js 14 application for AI-powered sports betting predictions with user authentication, dashboard, and pricing plans.
+A clean Next.js 14 MVP that showcases AI-generated betting predictions with a Whop-powered upgrade flow.
 
-## Tech Stack
+## What’s Included
 
-- **Next.js 14** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Beautiful UI components
-- **NextAuth.js v5** - Authentication (Email + Google)
-- **next-themes** - Dark/Light mode support
-- **ESLint** - Code linting
+- **Landing page (`/`)** – Minimal hero with CTA to view predictions.
+- **Dashboard (`/dashboard`)** – Displays daily match predictions, odds, AI win probability and confidence bars.
+- **Premium flow** – Free users see a limited set of predictions and are prompted to “Upgrade on Whop”.
+- **Mock data layer** – Predictions and streak data live in `lib/mockData.ts`.
+- **API stub** – `GET /api/predictions` fetches Odds API data with a mock fallback.
+- **Dark/Light mode** – Theme toggle powered by `next-themes`.
+- **shadcn/ui** – Cards, buttons, badges, and progress bars.
 
-## Features
+## Getting Started
 
-✅ **User Management**
-- NextAuth.js authentication with Email and Google providers
-- Protected dashboard route
-- Sign In/Sign Out functionality
-
-✅ **Dashboard**
-- Mock statistics (Total Profit, Win Rate, Total Bets)
-- AI Predictions display with confidence bars
-- Protected route (requires authentication)
-
-✅ **Pricing Page**
-- Free and Premium plan cards
-- Stripe integration placeholder
-
-✅ **Theme Support**
-- Dark/Light mode toggle
-- System theme detection
-
-## Installation
-
-1. Install dependencies:
 ```bash
 npm install
-```
-
-2. Create a `.env.local` file in the root directory:
-```env
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here
-
-# Optional: For Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-```
-
-**Note:** For demo purposes, you can sign in with any email and password "password" (no Google OAuth setup required).
-
-## Running the App
-
-To start the development server:
-
-```bash
 npm run dev
 ```
 
-The app will be available at **http://localhost:3000**
+Visit `http://localhost:3000` to view the landing page. Use `/login` to start the Whop OAuth flow and `/dashboard` to see the AI predictions view.
+
+### Environment variables
+
+Create a `.env.local` with:
+
+```env
+WHOP_CLIENT_ID=...
+WHOP_CLIENT_SECRET=...
+WHOP_REDIRECT_URI=http://localhost:3000/api/auth/whop/callback
+WHOP_CHECKOUT_URL=https://whop.com/your-space/premium-plan
+NEXT_PUBLIC_WHOP_CHECKOUT_URL=$WHOP_CHECKOUT_URL
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+ODDS_API_KEY=...
+```
 
 ## Project Structure
 
 ```
 ├── app/
-│   ├── api/auth/[...nextauth]/  # NextAuth API route
-│   ├── auth/signin/             # Sign in page
-│   ├── dashboard/               # Protected dashboard
-│   ├── pricing/                 # Pricing page
-│   └── page.tsx                 # Home page
+│   ├── api/auth/whop/*            # OAuth start + callback routes
+│   ├── api/predictions/route.ts   # Fetches Odds API data (mock fallback)
+│   ├── dashboard/page.tsx         # Main predictions dashboard
+│   ├── layout.tsx                 # Global providers + navbar
+│   ├── login/page.tsx             # Whop sign-in page
+│   └── page.tsx                   # Landing page
 ├── components/
-│   ├── ui/                      # shadcn/ui components
-│   ├── navbar.tsx               # Navigation bar
-│   ├── theme-toggle.tsx         # Theme switcher
-│   ├── prediction-card.tsx      # Prediction display card
-│   └── stats-card.tsx           # Statistics card
-├── lib/
-│   ├── auth.config.ts           # NextAuth configuration
-│   ├── auth.ts                  # Auth helper functions
-│   └── mockData.ts              # Mock predictions and stats
-├── server/                      # Backend logic (to be implemented)
-└── types/                       # TypeScript type definitions
+│   ├── navbar.tsx                 # Minimal navbar with Whop upgrade CTA
+│   ├── theme-provider.tsx         # next-themes wrapper
+│   ├── theme-toggle.tsx           # Dark/light mode toggle
+│   └── ui/                        # shadcn/ui primitives
+└── lib/
+    ├── mockData.ts                # Mock predictions + streak data
+    ├── predictions.ts             # Helper to fetch Odds API data
+    ├── session.ts                 # Session + membership helpers
+    └── supabase.ts                # Supabase service client
+└── supabase/schema.sql            # Tables for users, memberships, predictions, sessions
 ```
+
+## Customisation Hooks
+
+- **Whop integration** – Replace `WHOP_CHECKOUT_URL` in `app/dashboard/page.tsx` with your Whop checkout link.
+- **Access control** – Swap the `isSubscribed` flag with real Whop entitlement logic once available; run `supabase/schema.sql` to bootstrap tables.
+- **Live data** – Update `GET /api/predictions` to pull from Odds API / SportsData.io (already wired with a fallback).
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-
-## Authentication
-
-### Demo Credentials
-- **Email:** Any email address
-- **Password:** `password`
-
-### Google OAuth (Optional)
-To enable Google sign-in:
-1. Create a Google OAuth app at [Google Cloud Console](https://console.cloud.google.com/)
-2. Add the Client ID and Secret to `.env.local`
-3. Add `http://localhost:3000/api/auth/callback/google` as a redirect URI
+- `npm run dev` – Start the development server
+- `npm run build` – Create a production build
+- `npm run start` – Start the production server
+- `npm run lint` – Run ESLint
 
 ## Next Steps
 
-- [ ] Set up tRPC for type-safe API calls
-- [ ] Configure Prisma for database management
-- [ ] Integrate real AI APIs for predictions
-- [ ] Implement Stripe payment integration
-- [ ] Add user profile management
+- Integrate Whop SDK/webhooks to determine premium access.
+- Swap mock predictions with real data from Odds API or SportsData.io.
+- Persist user streaks and historical performance.
 
+Enjoy building! 🎯
