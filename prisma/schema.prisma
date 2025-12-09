@@ -80,3 +80,24 @@ model UserSession {
   @@index([expiresAt])
   @@map("user_sessions")
 }
+
+model Alert {
+  id             String   @id @default(uuid()) @db.Uuid
+  tweetId        String   @unique @map("tweet_id") @db.Text
+  author         String   @db.Text
+  authorHandle   String   @map("author_handle") @db.Text
+  sport          String   @db.Text
+  text           String   @db.Text
+  matchedKeywords String[] @map("matched_keywords") @db.Text
+  tweetedAt      DateTime @map("tweeted_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  url            String?  @db.Text
+  urgencyScore   Int      @default(0) @map("urgency_score")
+  windowTag      String?  @map("window_tag") @db.Text
+  isPremium      Boolean  @default(true) @map("is_premium")
+  rawJson        Json?    @map("raw_json")
+
+  @@index([sport])
+  @@index([tweetedAt])
+  @@map("alerts")
+}

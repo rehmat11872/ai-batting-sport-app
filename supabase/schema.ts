@@ -40,6 +40,23 @@ export interface UserSession {
   created_at: string;
 }
 
+export interface AlertRow {
+  id: string;
+  tweet_id: string;
+  author: string;
+  author_handle: string;
+  sport: string;
+  text: string;
+  matched_keywords: string[];
+  tweeted_at: string;
+  created_at: string;
+  url: string | null;
+  urgency_score: number;
+  window_tag: string | null;
+  is_premium: boolean;
+  raw_json: any | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -62,6 +79,11 @@ export interface Database {
         Row: UserSession;
         Insert: UserSession;
         Update: Partial<UserSession>;
+      };
+      alerts: {
+        Row: AlertRow;
+        Insert: Omit<AlertRow, "id" | "created_at"> & Partial<Pick<AlertRow, "id" | "created_at">>;
+        Update: Partial<AlertRow>;
       };
     };
   };

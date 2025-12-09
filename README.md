@@ -79,3 +79,6 @@ ODDS_API_KEY=...
 - Persist user streaks and historical performance.
 
 Enjoy building! 🎯
+
+
+   curl "http://localhost:3000/api/insiders/refresh"

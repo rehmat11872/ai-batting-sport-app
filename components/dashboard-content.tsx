@@ -7,15 +7,16 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DashboardNav } from "@/components/dashboard-nav";
-import { fetchNBAScores, fetchNFLScores, fetchSoccerScores, type FormattedGame } from "@/lib/espn";
-import { fetchWeather, type FormattedWeather, type GameWeather } from "@/lib/weather";
+import type { FormattedGame } from "@/lib/espn";
+import type { FormattedWeather, GameWeather } from "@/lib/weather";
 import { type Prediction } from "@/lib/predictions";
+import type { InsiderAlert, Sport } from "@/types/insiders";
 import Link from "next/link";
-import { Wind, Droplets, Cloud } from "lucide-react";
+import { Wind, Droplets, Cloud, Bell, AlertTriangle, Clock } from "lucide-react";
 
 const WHOP_CHECKOUT_URL = process.env.NEXT_PUBLIC_WHOP_CHECKOUT_URL ?? "https://whop.com";
 
-type Section = "predictions" | "nba" | "nfl" | "soccer" | "weather";
+type Section = "predictions" | "alerts" | "nba" | "nfl" | "soccer" | "weather";
 
 interface DashboardContentProps {
   predictions: Prediction[];
@@ -35,11 +36,45 @@ export function DashboardContent({
   isSubscribed,
 }: DashboardContentProps) {
   const [currentSection, setCurrentSection] = useState<Section>("predictions");
+  const [alerts, setAlerts] = React.useState<InsiderAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = React.useState<boolean>(true);
+  const [alertsError, setAlertsError] = React.useState<string | null>(null);
+  const [alertsSportFilter, setAlertsSportFilter] = React.useState<"ALL" | Sport>("ALL");
+  const [canViewFullAlerts, setCanViewFullAlerts] = React.useState<boolean>(isSubscribed);
 
   // Free users see 2-3 cards, premium see all
   const freeLimit = 2;
   const displayPredictions = isSubscribed ? predictions : predictions.slice(0, freeLimit);
   const hiddenPredictions = isSubscribed ? 0 : Math.max(0, predictions.length - freeLimit);
+
+  const loadAlerts = React.useCallback(
+    async (sport: "ALL" | Sport) => {
+      try {
+        setAlertsLoading(true);
+        setAlertsError(null);
+        const params = new URLSearchParams({ limit: isSubscribed ? "20" : "5" });
+        if (sport !== "ALL") {
+          params.set("sport", sport);
+        }
+        const res = await fetch(`/api/insiders/alerts?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Failed to load alerts (${res.status})`);
+        }
+        const data = await res.json();
+        setAlerts(data.alerts || []);
+        setCanViewFullAlerts(Boolean(data.canViewFullFeed));
+      } catch (error) {
+        setAlertsError("Could not load alerts right now. Please try again shortly.");
+      } finally {
+        setAlertsLoading(false);
+      }
+    },
+    [isSubscribed]
+  );
+
+  React.useEffect(() => {
+    loadAlerts(alertsSportFilter);
+  }, [alertsSportFilter, loadAlerts]);
 
   return (
     <section className="space-y-6">
@@ -78,6 +113,82 @@ export function DashboardContent({
                 <LockedContentNotice count={hiddenPredictions} />
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Insider Alerts */}
+      {currentSection === "alerts" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-medium">Breaking News Alerts</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Insider tweets that move betting lines. Injury news, lineups, weather, and late scratches.
+              </p>
+            </div>
+            {!canViewFullAlerts && (
+              <Button asChild size="sm" variant="outline">
+                <Link href={WHOP_CHECKOUT_URL} target="_blank" rel="noreferrer">
+                  Unlock Full Alerts
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(["ALL", "NFL", "NBA", "Soccer"] as const).map((sport) => (
+              <Button
+                key={sport}
+                size="sm"
+                variant={alertsSportFilter === sport ? "default" : "outline"}
+                onClick={() => setAlertsSportFilter(sport)}
+              >
+                {sport === "ALL" ? "All Sports" : sport}
+              </Button>
+            ))}
+          </div>
+
+          {alertsError && (
+            <Card className="border-amber-300 bg-amber-50 text-amber-900">
+              <CardContent className="flex items-center gap-2 p-4">
+                <AlertTriangle className="h-4 w-4" />
+                <p className="text-sm">{alertsError}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {alertsLoading ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="h-4 w-24 rounded bg-muted" />
+                    <div className="h-6 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-full rounded bg-muted" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : alerts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No alerts yet. We&apos;ll surface insider tweets as soon as they drop.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {alerts.map((alert) => (
+                <AlertCard key={alert.id} alert={alert} />
+              ))}
+            </div>
+          )}
+
+          {!canViewFullAlerts && alerts.length > 0 && (
+            <LockedContentNotice count={Math.max(0, alerts.length)} type="alerts" />
           )}
         </div>
       )}
@@ -226,6 +337,83 @@ export function DashboardContent({
       )}
     </section>
   );
+}
+
+function AlertCard({ alert }: { alert: InsiderAlert }) {
+  const highlighted = highlightKeywords(alert.text, alert.matchedKeywords);
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{alert.sport}</Badge>
+            {alert.windowTag && (
+              <Badge variant="secondary" className="text-xs">
+                {alert.windowTag.replace(/_/g, " ")}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{formatTimeAgo(alert.tweetedAt)}</span>
+          </div>
+        </div>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" />
+          {alert.author} <span className="text-xs font-normal text-muted-foreground">{alert.authorHandle}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm leading-relaxed">{highlighted}</p>
+        {alert.matchedKeywords.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {alert.matchedKeywords.map((kw) => (
+              <Badge key={kw} variant="secondary" className="text-[10px]">
+                {kw}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Urgency: {alert.urgencyScore}/10</span>
+          {alert.url && (
+            <Link href={alert.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+              View tweet →
+            </Link>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function highlightKeywords(text: string, keywords: string[]) {
+  if (!keywords || keywords.length === 0) return text;
+  const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+  const parts = text.split(regex);
+  return parts.map((part, idx) => {
+    if (keywords.some((k) => k.toLowerCase() === part.toLowerCase())) {
+      return (
+        <mark key={idx} className="bg-amber-100 text-amber-900 px-1 rounded">
+          {part}
+        </mark>
+      );
+    }
+    return <React.Fragment key={idx}>{part}</React.Fragment>;
+  });
+}
+
+function formatTimeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
 }
 
 function PredictionCard({ prediction, isSubscribed }: { prediction: Prediction; isSubscribed: boolean }) {
@@ -428,13 +616,15 @@ function GameCard({ game, isSubscribed }: { game: FormattedGame; isSubscribed: b
   );
 }
 
-function LockedContentNotice({ count, type = "predictions" }: { count: number; type?: "predictions" | "games" }) {
+function LockedContentNotice({ count, type = "predictions" }: { count: number; type?: "predictions" | "games" | "alerts" }) {
   return (
     <Card className="border-dashed bg-muted/30">
       <CardContent className="flex flex-col gap-3 p-6 text-center">
         <h3 className="text-lg font-semibold">Go Premium with Whop</h3>
         <p className="text-sm text-muted-foreground">
-          Unlock {count} additional {type === "predictions" ? "AI-backed predictions" : "live games"} and more premium features.
+          Unlock {count} additional{" "}
+          {type === "predictions" ? "AI-backed predictions" : type === "alerts" ? "insider alerts" : "live games"} and
+          more premium features.
         </p>
         <Button asChild>
           <Link href={WHOP_CHECKOUT_URL} target="_blank" rel="noreferrer">

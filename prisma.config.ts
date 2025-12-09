@@ -1,4 +1,9 @@
 import { defineConfig, env } from "prisma/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env.local explicitly for Prisma CLI commands
+config({ path: resolve(process.cwd(), ".env.local") });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

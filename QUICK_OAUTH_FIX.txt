@@ -1,0 +1,18 @@
+QUICK FIX: Update OAuth Redirect URI
+
+1. VERCEL:
+   - Go to: vercel.com → Your Project → Settings → Environment Variables
+   - Find: WHOP_REDIRECT_URI
+   - Change to: https://ai-batting-sport-app.vercel.app/oauth/callback
+   - Save → Redeploy
+
+2. WHOP DASHBOARD:
+   - Go to: whop.com/dashboard → Your App → OAuth Settings
+   - Add: https://ai-batting-sport-app.vercel.app/oauth/callback
+   - Save
+
+3. TEST:
+   - Visit: https://ai-batting-sport-app.vercel.app/login
+   - Try logging in
+
+Done! ✅

@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/insiders/refresh",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+

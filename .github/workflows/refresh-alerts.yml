@@ -1,0 +1,22 @@
+name: Refresh Insider Alerts
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Refresh Endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          curl -X GET \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/insiders/refresh"
+

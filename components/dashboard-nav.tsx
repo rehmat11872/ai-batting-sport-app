@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 
-type Section = "predictions" | "nba" | "nfl" | "soccer" | "weather";
+type Section = "predictions" | "alerts" | "nba" | "nfl" | "soccer" | "weather";
 
 interface DashboardNavProps {
   currentSection: Section;
@@ -21,6 +21,7 @@ interface DashboardNavProps {
 
 const sectionLabels: Record<Section, string> = {
   predictions: "Today's Predictions",
+  alerts: "Breaking News Alerts",
   nba: "NBA",
   nfl: "NFL",
   soccer: "Soccer",
@@ -41,6 +42,10 @@ export function DashboardNav({ currentSection, onSectionChange }: DashboardNavPr
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onSectionChange("predictions")}>
           Today&apos;s Predictions
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onSectionChange("alerts")}>
+          Breaking News Alerts
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>ESPN</DropdownMenuLabel>

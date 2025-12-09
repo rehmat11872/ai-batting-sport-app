@@ -53,10 +53,28 @@ async function setupDatabase() {
         expires_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      `CREATE TABLE IF NOT EXISTS public.alerts (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tweet_id TEXT UNIQUE,
+        author TEXT,
+        author_handle TEXT,
+        sport TEXT,
+        text TEXT,
+        matched_keywords TEXT[],
+        tweeted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        url TEXT,
+        urgency_score INT DEFAULT 0,
+        window_tag TEXT,
+        is_premium BOOLEAN DEFAULT TRUE,
+        raw_json JSONB
+      )`,
       `CREATE INDEX IF NOT EXISTS idx_memberships_user_id ON public.memberships(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(token)`,
       `CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON public.user_sessions(expires_at)`,
       `CREATE INDEX IF NOT EXISTS idx_users_whop_customer_id ON public.users(whop_customer_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_alerts_sport ON public.alerts(sport)`,
+      `CREATE INDEX IF NOT EXISTS idx_alerts_tweeted_at ON public.alerts(tweeted_at)`,
     ];
 
     // Execute each statement
@@ -76,7 +94,8 @@ async function setupDatabase() {
     console.log('  - users');
     console.log('  - memberships');
     console.log('  - predictions');
-    console.log('  - user_sessions\n');
+    console.log('  - user_sessions');
+    console.log('  - alerts\n');
     console.log('🎉 Setup complete! You can now login.\n');
 
   } catch (error) {

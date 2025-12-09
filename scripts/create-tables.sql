@@ -46,9 +46,29 @@ create table if not exists public.user_sessions (
   created_at timestamptz default now()
 );
 
+-- Alerts table - stores insider alerts sourced from X/Twitter
+create table if not exists public.alerts (
+  id uuid primary key default uuid_generate_v4(),
+  tweet_id text unique,
+  author text,
+  author_handle text,
+  sport text,
+  text text,
+  matched_keywords text[],
+  tweeted_at timestamptz,
+  created_at timestamptz default now(),
+  url text,
+  urgency_score int default 0,
+  window_tag text,
+  is_premium boolean default true,
+  raw_json jsonb
+);
+
 -- Indexes for performance
 create index if not exists idx_memberships_user_id on public.memberships(user_id);
 create index if not exists idx_user_sessions_token on public.user_sessions(token);
 create index if not exists idx_user_sessions_expires_at on public.user_sessions(expires_at);
 create index if not exists idx_users_whop_customer_id on public.users(whop_customer_id);
+create index if not exists idx_alerts_sport on public.alerts(sport);
+create index if not exists idx_alerts_tweeted_at on public.alerts(tweeted_at);
 
