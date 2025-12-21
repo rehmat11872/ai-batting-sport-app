@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -23,9 +24,21 @@ interface UserSession {
   avatarUrl?: string;
 }
 
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  sport?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export function Navbar() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,11 +48,43 @@ export function Navbar() {
       .then((data) => {
         setSession(data.session);
         setLoading(false);
+        
+        // If logged in, fetch notifications
+        if (data.session) {
+          fetchNotifications();
+        }
       })
       .catch(() => {
         setLoading(false);
       });
   }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications?limit=5");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "markAllRead" }),
+      });
+      setUnreadCount(0);
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error("Failed to mark notifications as read:", err);
+    }
+  };
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -76,8 +121,63 @@ export function Navbar() {
               {session ? (
                 <>
                   <Button asChild variant="ghost" size="sm">
+                    <Link href="/betintel">BetIntel AI</Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="sm">
                     <Link href="/dashboard">Dashboard</Link>
                   </Button>
+                  
+                  {/* Notification Bell */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="relative">
+                        <Bell className="h-5 w-5" />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80" align="end">
+                      <DropdownMenuLabel className="flex items-center justify-between">
+                        <span>Notifications</span>
+                        {unreadCount > 0 && (
+                          <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={markAllRead}>
+                            Mark all read
+                          </Button>
+                        )}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.slice(0, 5).map((notif) => (
+                          <DropdownMenuItem key={notif.id} className="flex flex-col items-start p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{notif.title}</span>
+                              {notif.sport && (
+                                <span className="text-xs bg-muted px-1.5 py-0.5 rounded">{notif.sport}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                              {notif.message}
+                            </p>
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/betintel" className="w-full text-center text-sm text-primary">
+                          View all in BetIntel
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  {/* User Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -111,6 +211,9 @@ export function Navbar() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
+                        <Link href="/betintel">BetIntel AI</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/dashboard">Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
@@ -130,16 +233,9 @@ export function Navbar() {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href="/login">Login</Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={process.env.NEXT_PUBLIC_WHOP_CHECKOUT_URL ?? "https://whop.com"} target="_blank" rel="noreferrer">
-                      Upgrade on Whop
-                    </Link>
-                  </Button>
-                </>
+                <Button asChild variant="default" size="sm">
+                  <Link href="/login">Sign In</Link>
+                </Button>
               )}
             </>
           )}

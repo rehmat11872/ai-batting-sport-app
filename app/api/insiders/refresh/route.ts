@@ -9,6 +9,7 @@ import {
   inferSportFromHandle,
 } from "@/lib/insiders";
 import { searchRecentTweets } from "@/lib/x-client";
+import { prisma } from "@/lib/prisma";
 import type { Sport } from "@/types/insiders";
 
 export const dynamic = "force-dynamic";
@@ -100,12 +101,79 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const { inserted } = await saveAlerts(preparedAlerts);
+  const { inserted, alertIds } = await saveAlerts(preparedAlerts);
+
+  // Create notifications for high-urgency alerts (urgency >= 6 or within game window)
+  let notificationsCreated = 0;
+  
+  if (inserted > 0) {
+    try {
+      // Get all subscribed users to notify
+      const subscribedUsers = await prisma.user.findMany({
+        where: {
+          memberships: {
+            some: {
+              status: "active",
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      // Filter high-priority alerts (pre-match alerts)
+      const highPriorityAlerts = preparedAlerts.filter(
+        (alert) => alert.urgencyScore >= 6 || alert.windowTag !== null
+      );
+
+      // Create notifications for each user
+      for (const user of subscribedUsers) {
+        for (const alert of highPriorityAlerts) {
+          // Determine notification type
+          let notificationType = "breaking";
+          const keywords = alert.matchedKeywords.map((k: string) => k.toLowerCase());
+          
+          if (keywords.some((k: string) => ["injury", "injured", "out", "dnp", "ir", "concussion"].includes(k))) {
+            notificationType = "injury";
+          } else if (keywords.some((k: string) => ["starting", "lineup", "benched", "inactive"].includes(k))) {
+            notificationType = "lineup";
+          } else if (keywords.some((k: string) => ["weather", "postponed", "delayed"].includes(k))) {
+            notificationType = "weather";
+          }
+
+          const titles: Record<string, string> = {
+            injury: "🚨 Injury Alert",
+            lineup: "📋 Lineup Change",
+            weather: "🌧️ Weather Update",
+            breaking: "⚡ Breaking News",
+          };
+
+          try {
+            await prisma.userNotification.create({
+              data: {
+                userId: user.id,
+                type: notificationType as any,
+                title: titles[notificationType],
+                message: alert.text.slice(0, 500),
+                sport: alert.sport,
+                isRead: false,
+              },
+            });
+            notificationsCreated++;
+          } catch (e) {
+            // Ignore duplicate notification errors
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error creating notifications:", error);
+    }
+  }
 
   return NextResponse.json({
     requestedSports: sports,
     fetched: preparedAlerts.length,
     inserted,
+    notificationsCreated,
   });
 }
 

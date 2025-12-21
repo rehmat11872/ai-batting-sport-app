@@ -1,21 +1,25 @@
 /**
- * Database Setup Script
- * Creates all required tables in Supabase
+ * Database Migration Script
+ * Runs all SQL migrations to create/update tables
  * 
- * Run: node scripts/setup-database.js
+ * Usage: node scripts/run-migrations.js
  */
+
+require('dotenv').config({ path: '.env.local' });
 
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-async function setupDatabase() {
-  console.log('🚀 Setting up database tables...\n');
+async function runMigrations() {
+  console.log('🚀 Running database migrations...\n');
 
   try {
-    // Execute SQL statements one by one
-    const statements = [
+    const migrations = [
+      // Enable UUID extension
       `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`,
+      
+      // Users table
       `CREATE TABLE IF NOT EXISTS public.users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         whop_customer_id TEXT UNIQUE,
@@ -24,6 +28,8 @@ async function setupDatabase() {
         avatar_url TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      
+      // Memberships table
       `CREATE TABLE IF NOT EXISTS public.memberships (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -33,6 +39,8 @@ async function setupDatabase() {
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id)
       )`,
+      
+      // Predictions table
       `CREATE TABLE IF NOT EXISTS public.predictions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         event_id TEXT,
@@ -47,12 +55,16 @@ async function setupDatabase() {
         tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'premium')),
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      
+      // User sessions table
       `CREATE TABLE IF NOT EXISTS public.user_sessions (
         token TEXT PRIMARY KEY,
         user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
         expires_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      
+      // Alerts table (X/Twitter insider alerts)
       `CREATE TABLE IF NOT EXISTS public.alerts (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         tweet_id TEXT UNIQUE,
@@ -69,13 +81,8 @@ async function setupDatabase() {
         is_premium BOOLEAN DEFAULT TRUE,
         raw_json JSONB
       )`,
-      `CREATE INDEX IF NOT EXISTS idx_memberships_user_id ON public.memberships(user_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(token)`,
-      `CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON public.user_sessions(expires_at)`,
-      `CREATE INDEX IF NOT EXISTS idx_users_whop_customer_id ON public.users(whop_customer_id)`,
-      `CREATE INDEX IF NOT EXISTS idx_alerts_sport ON public.alerts(sport)`,
-      `CREATE INDEX IF NOT EXISTS idx_alerts_tweeted_at ON public.alerts(tweeted_at)`,
-      // BetIntel AI Query System tables
+      
+      // User plans table (BetIntel)
       `CREATE TABLE IF NOT EXISTS public.user_plans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
@@ -85,6 +92,8 @@ async function setupDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      
+      // Query usage table (BetIntel)
       `CREATE TABLE IF NOT EXISTS public.query_usage (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -95,6 +104,8 @@ async function setupDatabase() {
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, period_start)
       )`,
+      
+      // Query history table (BetIntel)
       `CREATE TABLE IF NOT EXISTS public.query_history (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
@@ -108,26 +119,61 @@ async function setupDatabase() {
         parent_query_id UUID,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )`,
+      
+      // User notifications table (for pre-match alerts)
+      `CREATE TABLE IF NOT EXISTS public.user_notifications (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+        alert_id UUID REFERENCES public.alerts(id) ON DELETE CASCADE,
+        type TEXT DEFAULT 'injury' CHECK (type IN ('injury', 'lineup', 'weather', 'breaking')),
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        sport TEXT,
+        matchup TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )`,
+      
+      // Indexes
+      `CREATE INDEX IF NOT EXISTS idx_memberships_user_id ON public.memberships(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON public.user_sessions(token)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON public.user_sessions(expires_at)`,
+      `CREATE INDEX IF NOT EXISTS idx_users_whop_customer_id ON public.users(whop_customer_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_alerts_sport ON public.alerts(sport)`,
+      `CREATE INDEX IF NOT EXISTS idx_alerts_tweeted_at ON public.alerts(tweeted_at)`,
       `CREATE INDEX IF NOT EXISTS idx_user_plans_user_id ON public.user_plans(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_query_usage_user_id ON public.query_usage(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_query_history_user_id ON public.query_history(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_query_history_game_context ON public.query_history(game_context)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_notifications_user_id ON public.user_notifications(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_user_notifications_is_read ON public.user_notifications(is_read)`,
     ];
 
-    // Execute each statement
-    for (const sql of statements) {
+    let successCount = 0;
+    let skipCount = 0;
+
+    for (const sql of migrations) {
       try {
         await prisma.$executeRawUnsafe(sql);
+        successCount++;
+        // Extract table/index name for logging
+        const match = sql.match(/(?:TABLE|INDEX).*?public\.(\w+)/i);
+        if (match) {
+          console.log(`  ✓ ${match[1]}`);
+        }
       } catch (err) {
-        // Ignore "already exists" errors
-        if (!err.message.includes('already exists') && !err.message.includes('duplicate')) {
+        if (err.message.includes('already exists') || err.message.includes('duplicate')) {
+          skipCount++;
+        } else {
           throw err;
         }
       }
     }
 
-    console.log('✅ Database tables created successfully!\n');
-    console.log('Tables created:');
+    console.log(`\n✅ Migrations complete!`);
+    console.log(`   ${successCount} executed, ${skipCount} skipped (already exist)\n`);
+
+    console.log('Tables:');
     console.log('  - users');
     console.log('  - memberships');
     console.log('  - predictions');
@@ -135,22 +181,20 @@ async function setupDatabase() {
     console.log('  - alerts');
     console.log('  - user_plans');
     console.log('  - query_usage');
-    console.log('  - query_history\n');
-    console.log('🎉 Setup complete! You can now login.\n');
+    console.log('  - query_history');
+    console.log('  - user_notifications\n');
 
   } catch (error) {
-    console.error('❌ Error setting up database:', error.message);
-    console.error('\n💡 Alternative: Use Supabase Dashboard');
-    console.error('   1. Go to https://supabase.com/dashboard');
-    console.error('   2. Select your project');
-    console.error('   3. Click SQL Editor');
-    console.error('   4. Copy SQL from supabase/schema.sql');
-    console.error('   5. Paste and Run\n');
+    console.error('❌ Migration failed:', error.message);
+    console.error('\n💡 If you see connection errors:');
+    console.error('   1. Check DATABASE_URL in .env.local');
+    console.error('   2. Make sure Supabase project is running');
+    console.error('   3. Try running SQL directly in Supabase Dashboard\n');
     process.exit(1);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-setupDatabase();
+runMigrations();
 
