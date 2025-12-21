@@ -16,7 +16,61 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           APP_URL: ${{ secrets.APP_URL }}
         run: |
-          curl -X GET \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            "$APP_URL/api/insiders/refresh"
+          echo "🔍 Checking configuration..."
+          
+          # Check if APP_URL is set
+          if [ -z "$APP_URL" ]; then
+            echo "❌ ERROR: APP_URL secret is not set!"
+            echo ""
+            echo "📋 To fix this:"
+            echo "   1. Go to: https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions"
+            echo "   2. Click 'New repository secret'"
+            echo "   3. Name: APP_URL"
+            echo "   4. Value: https://your-app.vercel.app (your actual Vercel URL)"
+            echo "   5. Click 'Add secret'"
+            echo ""
+            echo "💡 Your APP_URL should be your deployed Vercel URL"
+            echo "   Example: https://ai-sports-betting.vercel.app"
+            exit 1
+          fi
+          
+          echo "✅ APP_URL is set: $APP_URL"
+          
+          # Check if CRON_SECRET is set
+          if [ -z "$CRON_SECRET" ]; then
+            echo "⚠️  WARNING: CRON_SECRET is not set, calling without auth"
+            echo "   (This will fail if your endpoint requires CRON_SECRET)"
+            echo ""
+            echo "📋 To set CRON_SECRET:"
+            echo "   1. Go to: https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions"
+            echo "   2. Click 'New repository secret'"
+            echo "   3. Name: CRON_SECRET"
+            echo "   4. Value: (same value as in your .env.local)"
+            echo "   5. Click 'Add secret'"
+            echo ""
+            curl -f -X GET "$APP_URL/api/insiders/refresh" || {
+              echo ""
+              echo "❌ Request failed. Check if:"
+              echo "   - Your app is deployed and accessible"
+              echo "   - The endpoint /api/insiders/refresh exists"
+              echo "   - CRON_SECRET is required (set it if needed)"
+              exit 1
+            }
+          else
+            echo "✅ CRON_SECRET is set"
+            echo "🚀 Calling: $APP_URL/api/insiders/refresh"
+            curl -f -X GET \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$APP_URL/api/insiders/refresh" || {
+              echo ""
+              echo "❌ Request failed. Check if:"
+              echo "   - Your app is deployed and accessible"
+              echo "   - CRON_SECRET matches your .env.local value"
+              echo "   - The endpoint /api/insiders/refresh exists"
+              exit 1
+            }
+          fi
+          
+          echo ""
+          echo "✅ Success! Cron job completed."
 

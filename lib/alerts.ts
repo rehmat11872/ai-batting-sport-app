@@ -19,11 +19,14 @@ export interface AlertInsert {
 }
 
 export async function saveAlerts(alerts: AlertInsert[]) {
-  if (alerts.length === 0) return { inserted: 0 };
+  if (alerts.length === 0) return { inserted: 0, alertIds: [] };
 
   let inserted = 0;
+  const alertIds: string[] = [];
+  
   for (const alert of alerts) {
     try {
+      const alertId = randomUUID();
       await prisma.$executeRaw`
         INSERT INTO alerts (
           id,
@@ -42,7 +45,7 @@ export async function saveAlerts(alerts: AlertInsert[]) {
           raw_json
         )
         VALUES (
-          ${randomUUID()}::uuid,
+          ${alertId}::uuid,
           ${alert.tweetId},
           ${alert.author},
           ${alert.authorHandle},
@@ -60,12 +63,13 @@ export async function saveAlerts(alerts: AlertInsert[]) {
         ON CONFLICT (tweet_id) DO NOTHING;
       `;
       inserted += 1;
+      alertIds.push(alertId);
     } catch (error) {
       console.error("Error saving alert", error);
     }
   }
 
-  return { inserted };
+  return { inserted, alertIds };
 }
 
 export async function fetchAlertsFromDb(options: {
