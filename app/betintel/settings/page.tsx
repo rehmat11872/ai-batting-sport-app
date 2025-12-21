@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -105,9 +106,11 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 {user?.avatarUrl ? (
-                  <img
+                  <Image
                     src={user.avatarUrl}
                     alt="Avatar"
+                    width={64}
+                    height={64}
                     className="h-16 w-16 rounded-full object-cover"
                   />
                 ) : (

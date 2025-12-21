@@ -11,8 +11,8 @@ interface GameData {
   awayTeam: string;
   date: string;
   status: string;
-  homeScore?: number;
-  awayScore?: number;
+  homeScore?: number | string;
+  awayScore?: number | string;
   venue?: string;
 }
 
@@ -72,13 +72,13 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
       const nbaGames = await fetchNBAScores();
       allGames.push(...nbaGames.map(g => ({
         sport: "NBA",
-        matchup: g.name,
+        matchup: `${g.awayTeam} vs ${g.homeTeam}`,
         homeTeam: g.homeTeam,
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
@@ -87,13 +87,13 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
       const nflGames = await fetchNFLScores();
       allGames.push(...nflGames.map(g => ({
         sport: "NFL",
-        matchup: g.name,
+        matchup: `${g.awayTeam} vs ${g.homeTeam}`,
         homeTeam: g.homeTeam,
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
@@ -102,13 +102,13 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
       const soccerGames = await fetchSoccerScores();
       allGames.push(...soccerGames.map(g => ({
         sport: "Soccer",
-        matchup: g.name,
+        matchup: `${g.awayTeam} vs ${g.homeTeam}`,
         homeTeam: g.homeTeam,
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
