@@ -74,6 +74,7 @@ export default function BetIntelPage() {
   // Fetch usage on mount
   useEffect(() => {
     fetchUsage();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUsage = async () => {
