@@ -11,8 +11,8 @@ interface GameData {
   awayTeam: string;
   date: string;
   status: string;
-  homeScore?: number;
-  awayScore?: number;
+  homeScore?: number | string;
+  awayScore?: number | string;
   venue?: string;
 }
 
@@ -77,8 +77,8 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
@@ -92,8 +92,8 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
@@ -107,8 +107,8 @@ async function findMatchingGame(query: string, sport: string | null): Promise<Ga
         awayTeam: g.awayTeam,
         date: g.date,
         status: g.status,
-        homeScore: g.homeScore,
-        awayScore: g.awayScore,
+        homeScore: g.homeScore ? Number(g.homeScore) : undefined,
+        awayScore: g.awayScore ? Number(g.awayScore) : undefined,
         venue: g.venue,
       })));
     }
